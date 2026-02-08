@@ -401,7 +401,10 @@ void D_PolysetDrawSpans8(spanpackage_t *pspanpackage)
 				// quick non-fix to stop it from segfaulting. gl hf whoever stumbles upon this.
 			}
 			do {
-				if ((lzi >> 16) >= *lpz) {
+				if (d_viewbuffer + (vid.width * vid.height) <= lpdest || d_viewbuffer > lpdest) {
+					Con_DPrintf("Alias model drawing segfault\n");
+					break;
+				} else if ((lzi >> 16) >= *lpz) {
 					s32 pix;
 					if (!r_rgblighting.value || !colored_aliaslight)
 						pix = ((u8*)acolormap)[*lptex + (llight & 0xFF00)];
@@ -466,7 +469,10 @@ void D_PolysetDrawSpans8Dithered(spanpackage_t *pspanpackage)
 				// quick non-fix to stop it from segfaulting. gl hf whoever stumbles upon this.
 			}
 			do {
-				if ((lzi >> 16) >= *lpz) {
+				if (d_viewbuffer + (vid.width * vid.height) <= lpdest || d_viewbuffer > lpdest) {
+					Con_DPrintf("Alias model drawing segfault\n");
+					break;
+				} else if ((lzi >> 16) >= *lpz) {
 					// CyanBun96: dithered sampling from Unreal
 					u8 *skin_base = (u8 *)r_affinetridesc.pskin;
 					s32 skin_w = r_affinetridesc.skinwidth;

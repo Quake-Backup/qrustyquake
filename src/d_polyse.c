@@ -86,15 +86,19 @@ void D_PolysetDrawFinalVerts(finalvert_t *fv, s32 numverts)
 		// right clip edges, due to the fill rule; these shouldn't be drawn
 		if (fv->v[0] < r_refdef.vrectright && fv->v[1] < r_refdef.vrectbottom) {
 			if (fv->v[0] < 0 || fv->v[1] < 0) {
+				#ifdef DEBUG
 				Con_DPrintf("Zbuf segfault 0 %d %d\n", fv->v[0], fv->v[1]);
+				#endif
+				continue;
+			}
+			s16 *zbuf = zspantable[fv->v[1]] + fv->v[0];
+			if (zbuf - d_pzbuffer > (s32)(vid.width * vid.height * sizeof(s16))) {
+				#ifdef DEBUG
+				Con_DPrintf("Zbuf segfault 2\n");
+				#endif
 				continue;
 			}
 			s32 z = fv->v[5] >> 16;
-			s16 *zbuf = zspantable[fv->v[1]] + fv->v[0];
-			if (zbuf - d_pzbuffer > (s32)(vid.width * vid.height * sizeof(s16))) {
-				Con_DPrintf("Zbuf segfault 2\n");
-				continue;
-			}
 			if (!(z >= *zbuf))
 				continue;
 			s32 pix;
@@ -243,15 +247,19 @@ split: // split this edge
 	if ((lp2[1] == lp1[1]) && (lp2[0] < lp1[0]))
 		goto nodraw;
 	if (new[0] < 0 || new[1] < 0 || new[1] >= r_refdef.fvrectbottom || new[0] >= r_refdef.fvrectright) {
+		#ifdef DEBUG
 		Con_DPrintf("Zbuf segfault 1 %d %d\n", new[0], new[1]);
+		#endif
+		goto nodraw;
+	}
+	s16 *zbuf = zspantable[new[1]] + new[0];
+	if (zbuf - d_pzbuffer > (s32)(vid.width * vid.height * sizeof(s16))) {
+		#ifdef DEBUG
+		Con_DPrintf("Zbuf segfault 3\n");
+		#endif
 		goto nodraw;
 	}
 	s32 z = new[5] >> 16;
-	s16 *zbuf = zspantable[new[1]] + new[0];
-	if (zbuf - d_pzbuffer > (s32)(vid.width * vid.height * sizeof(s16))) {
-		Con_DPrintf("Zbuf segfault 3\n");
-		goto nodraw;
-	}
 	if (z >= *zbuf) {
 		*zbuf = z;
 		s32 pix;
@@ -393,26 +401,26 @@ void D_PolysetDrawSpans8(spanpackage_t *pspanpackage)
 		} else {
 			d_aspancount += ubasestep;
 		}
-		if (lcount) {
+		if (lcount > 0) {
 			u8 *lpdest = pspanpackage->pdest;
-			u8 *lptex = pspanpackage->ptex;
 			s16 *lpz = pspanpackage->pz;
+			u8 *dest_end = d_viewbuffer + vid.width * vid.height;
+			s16 *z_end = d_pzbuffer + vid.width * vid.height;
+			if (lpdest < d_viewbuffer || lpdest + lcount > dest_end ||
+				lpz < d_pzbuffer || lpz + lcount > z_end) {
+				#ifdef DEBUG
+				Con_DPrintf("D_PolysetDrawSpans8: Invalid span\n");
+				#endif
+				pspanpackage++;
+				continue;
+			}
+			u8 *lptex = pspanpackage->ptex;
 			s32 lsfrac = pspanpackage->sfrac;
 			s32 ltfrac = pspanpackage->tfrac;
 			s32 llight = pspanpackage->light;
 			s32 lzi = pspanpackage->zi;
-			if (lpz + lcount - d_pzbuffer > (s32)(vid.width * vid.height * sizeof(s16))) {
-				Con_DPrintf ("Invalid span length: %d %d\n", 
-					lpz + lcount - d_pzbuffer, vid.width * vid.height * sizeof(s16));
-				break;
-				// CyanBun96: i caused this bug and i can't be bothered to fix it. Here, have a
-				// quick non-fix to stop it from segfaulting. gl hf whoever stumbles upon this.
-			}
 			do {
-				if (d_viewbuffer + (vid.width * vid.height) <= lpdest || d_viewbuffer > lpdest) {
-					Con_DPrintf("Alias model drawing segfault\n");
-					break;
-				} else if ((lzi >> 16) >= *lpz) {
+				if ((lzi >> 16) >= *lpz) {
 					s32 pix;
 					if (!r_rgblighting.value || !colored_aliaslight)
 						pix = ((u8*)acolormap)[*lptex + (llight & 0xFF00)];
@@ -461,26 +469,26 @@ void D_PolysetDrawSpans8Dithered(spanpackage_t *pspanpackage)
 		} else {
 			d_aspancount += ubasestep;
 		}
-		if (lcount) {
+		if (lcount > 0) {
 			u8 *lpdest = pspanpackage->pdest;
-			u8 *lptex = pspanpackage->ptex;
 			s16 *lpz = pspanpackage->pz;
+			u8 *dest_end = d_viewbuffer + vid.width * vid.height;
+			s16 *z_end = d_pzbuffer + vid.width * vid.height;
+			if (lpdest < d_viewbuffer || lpdest + lcount > dest_end ||
+				lpz < d_pzbuffer || lpz + lcount > z_end) {
+				#ifdef DEBUG
+				Con_DPrintf("D_PolysetDrawSpans8Dithered: Invalid span\n");
+				#endif
+				pspanpackage++;
+				continue;
+			}
+			u8 *lptex = pspanpackage->ptex;
 			s32 lsfrac = pspanpackage->sfrac;
 			s32 ltfrac = pspanpackage->tfrac;
 			s32 llight = pspanpackage->light;
 			s32 lzi = pspanpackage->zi;
-			if (lpz + lcount - d_pzbuffer > (s32)(vid.width * vid.height * sizeof(s16))) {
-				Con_DPrintf ("Invalid span length: %d %d\n", 
-					lpz + lcount - d_pzbuffer, vid.width * vid.height * sizeof(s16));
-				break;
-				// CyanBun96: i caused this bug and i can't be bothered to fix it. Here, have a
-				// quick non-fix to stop it from segfaulting. gl hf whoever stumbles upon this.
-			}
 			do {
-				if (d_viewbuffer + (vid.width * vid.height) <= lpdest || d_viewbuffer > lpdest) {
-					Con_DPrintf("Alias model drawing segfault\n");
-					break;
-				} else if ((lzi >> 16) >= *lpz) {
+				if ((lzi >> 16) >= *lpz) {
 					// CyanBun96: dithered sampling from Unreal
 					u8 *skin_base = (u8 *)r_affinetridesc.pskin;
 					s32 skin_w = r_affinetridesc.skinwidth;
@@ -556,7 +564,9 @@ void D_RasterizeAliasPolySmooth()
 	u32 initialleftheight = pleftbottom[1] - plefttop[1];
 	u32 initialrightheight = prightbottom[1] - prighttop[1];
 	if (initialleftheight>=vid.height || initialrightheight>=vid.height) {
+		#ifdef DEBUG
 		Con_DPrintf("Broken alias model\n");
+		#endif
 		return;
 	}
 	// set the s, t, and light gradients, which are consistent across the

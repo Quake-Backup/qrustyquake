@@ -92,7 +92,8 @@ void D_PolysetDrawFinalVerts(finalvert_t *fv, s32 numverts)
 				continue;
 			}
 			s16 *zbuf = zspantable[fv->v[1]] + fv->v[0];
-			if (zbuf - d_pzbuffer > (s32)(vid.width * vid.height * sizeof(s16))) {
+			if (zbuf - d_pzbuffer > (s32)(vid.width * vid.height * sizeof(s16))
+					|| zbuf < d_pzbuffer) {
 				#ifdef DEBUG
 				Con_DPrintf("Zbuf segfault 2\n");
 				#endif
@@ -253,7 +254,8 @@ split: // split this edge
 		goto nodraw;
 	}
 	s16 *zbuf = zspantable[new[1]] + new[0];
-	if (zbuf - d_pzbuffer > (s32)(vid.width * vid.height * sizeof(s16))) {
+	if (zbuf - d_pzbuffer > (s32)(vid.width * vid.height * sizeof(s16))
+			|| zbuf < d_pzbuffer) {
 		#ifdef DEBUG
 		Con_DPrintf("Zbuf segfault 3\n");
 		#endif

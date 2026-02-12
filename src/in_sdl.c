@@ -214,8 +214,8 @@ void IN_Move(usercmd_t *cmd)
 	else if (jlook_x < 0) jlook_x += jdeadzone.value;
 	if      (jlook_y > 0) jlook_y -= jdeadzone.value;
 	else if (jlook_y < 0) jlook_y += jdeadzone.value;
-	mouse_x += jlook_x*0.0005*jlooksens.value;
-	mouse_y += jlook_y*0.0005*jlooksens.value;
+	mouse_x += jlook_x*0.0005*jlooksens.value*host_frametime*72.0;
+	mouse_y += jlook_y*0.0005*jlooksens.value*host_frametime*72.0;
 	s32 jmove_x = jaxis_move_x;
 	s32 jmove_y = jaxis_move_y;
 	if      (jmove_x > 0 && jmove_x <  jdeadzone.value) jmove_x = 0;

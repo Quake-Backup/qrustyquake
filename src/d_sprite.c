@@ -15,10 +15,21 @@ void D_SpriteDrawSpans(sspan_t *pspan)
 	// we count on FP exceptions being turned off to avoid range problems
 	s32 izistep = (s32)(d_zistepu * 0x8000 * 0x10000);
 	do {
+		if (pspan->v < 0 || pspan->v >= vid.height)
+			goto NextSpan;
+		if (pspan->u < 0 || pspan->u >= vid.width)
+			goto NextSpan;
+		if (pspan->count <= 0)
+			goto NextSpan;
+		if (pspan->u + pspan->count > vid.width)
+			pspan->count = vid.width - pspan->u;
+		s32 count = pspan->count;
 		u8 *pdest = d_viewbuffer + (screenwidth*pspan->v) + pspan->u;
 		s16 *pz = d_pzbuffer + (d_zwidth * pspan->v) + pspan->u;
-		s32 count = pspan->count;
-		if (count <= 0)
+		if (pdest < d_viewbuffer
+			|| pdest+count > d_viewbuffer+vid.width*vid.height)
+			goto NextSpan;
+		if (pz<d_pzbuffer || pz+count>d_pzbuffer+vid.width*vid.height*2)
 			goto NextSpan;
 		// calculate the initial s/z, t/z, 1/z, s, and t and clamp
 		f32 du = (f32)pspan->u;
@@ -96,11 +107,7 @@ void D_SpriteDrawSpans(sspan_t *pspan)
 			do {
 				u8 btemp = *(pbase + (s >> 16) +
 						(t >> 16) * cachewidth);
-				if ((pz + ((vid.width * vid.height)*2)) <= pz)
-					Con_DPrintf("Sprite Zbuf render error\n");
-				else if (d_viewbuffer + (vid.width * vid.height) <= pdest)
-					Con_DPrintf("Sprite Viewbuf render error\n");
-				else if (btemp != 255 && *pz <= (izi >> 16)) {
+				if (btemp != 255 && *pz <= (izi >> 16)) {
 					*pz = izi >> 16;
 					*pdest = btemp;
 				}
